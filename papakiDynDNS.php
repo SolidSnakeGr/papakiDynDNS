@@ -16,7 +16,7 @@ include('dom/simple_html_dom.php');
 //Setup
 $config['hosts'] = array('', 'www', 'mail'); //Add all your host names here
 $config['domain'] = 'your_papaki_domain';
-$config['new_ip_address'] = file_get_contents('http://icanhazip.com/'); //Update this with the IP of your server if not on it
+$config['new_ip_address'] = trim(file_get_contents('http://icanhazip.com/')); //Update this with the IP of your server if not on it
 $config['papaki_username'] = 'your_papaki_gr_username';
 $config['papaki_password'] = 'your_papaki_gr_password';
 
@@ -56,6 +56,7 @@ if (DEBUG) print_r("Searching for the needed A record(s).\n");
 $html = new simple_html_dom();
 $html->load($response);
 $records_updated = 0;
+$records_not_updated = 0;
 foreach($html->find('span') as $span)
 {
 	// rpttypes_ctl00 are A records
@@ -73,10 +74,11 @@ foreach($html->find('span') as $span)
 				if ($config['new_ip_address'] == $current_ip[0]->plaintext)
 				{
 					if (DEBUG) print_r("No need to update, IP is the same as the one we are trying to update\n");
-					die();
+					$records_not_updated++;
+					break;
 				}
 
-				if (DEBUG) print_r("The record has to be updated.!\n");
+				if (DEBUG) print_r("The record has to be updated from ". $current_ip[0]->plaintext ." to ". $config['new_ip_address']." .!\n");
 
 				$search_id = 'rpttypes_ctl00_rptRecords_' . $rptRecord . '_lnk_edit';
 				$edit_button = $html->find('a[id=' . $search_id . ']');
@@ -124,7 +126,7 @@ foreach($html->find('span') as $span)
 
 if (DEBUG) print_r("Updated ".$records_updated." out of " . count($config['full_hosts']) . " records\n");
 
-if ($records_updated < count($config['full_hosts']))
+if ($records_updated + $records_not_updated < count($config['full_hosts']))
 {
 	//Not all hosts found - maybe need to create entries
 	if (DEBUG) print_r("WARNING: One or more records were not found. We may have to insert new ones but that has not been implemented yet.\n");
